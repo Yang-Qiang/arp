@@ -1,3 +1,8 @@
+#include <net/ethernet.h>
+#include <stdlib.h>
+#include<inttypes.h>
+#include <netinet/ip.h>
+#include <netinet/tcp.h>
 #include<stdio.h>
 #include<pcap.h>
 #include<netinet/in.h>
@@ -10,7 +15,10 @@
 #include<unistd.h>
 #include <stdio.h>
 #include <unistd.h>
-#include <string.h> /* for strncpy */
+#include <string.h>
+#include <sys/types.h>
+
+#define Mac_length 6
 
 char* getMyIP(){
 	int fd;
@@ -53,38 +61,39 @@ char* getGatewayIP(){
         return buf;
 }
 
-char* set_packet(const char* senderIP,const char* recieverIP, const char* senderMac){
+char* set_packet(const char* senderIP,const char* recieverIP,char* senderMac){
 	char *packet,*Mactok;
 	char *Mac;
-	struct ehther_header *ep;
+	char* Temp[Mac_length];
+	struct ether_header *ep;
 	struct ip *iph;
 	struct tcphdr *tcp;
 	unsigned short e_type;
 	int i=0;
 	packet = NULL;
 	ep = (struct ether_header *)packet;
-	strcpy(Mac,senderMac);
-	Mactok[0]=strtok(Mac,":");
-	Mactok[1]=strtok(NULL,":");
-        Mactok[2]=strtok(NULL,":");
-        Mactok[3]=strtok(NULL,":");
-        Mactok[4]=strtok(NULL,":");
-        Mactok[5]=strtok(NULL,":");
-
-	sprintf(ep->ether_shost,"%x%x%x%x%x%x",Mactok[0],Mactok[1],Mactok[2],Mactok[3],Mactok[4],Mactok[5]);
+	memcpy(ep->ether_shost,string_To_Mac(senderMac),Mac_length);
 	printf("SRC MAP= %x-%x-%x-%x-%x-%x\n",ep->ether_shost[0],ep->ether_shost[1],ep->ether_shost[2],ep->ether_shost[3],ep->ether_shost[4],ep->ether_shost[5]);
 
-
+	return packet;
 }
-
+__u_char* string_To_Mac(char* Mac_addr){
+	__u_char* converted = (__u_char *)malloc(Mac_length);
+	sscanf(Mac_addr,"%x:%x:%x:%x:%x:%x",&converted[0],&converted[1],&converted[2],&converted[3],&converted[4],&converted[5]);
+	return converted;
+	}
 int main(int argc, char* argv[])
 {
- char victmIP[256];
+ char victmIP[256],MyIP[256],MyMac[256],GateIP[256];
  int i;
  char* tok;
- printf("%s\n", getMyIP());
- printf("%s\n", getMyMac());
- printf("%s\n",getGatewayIP());
+ strcpy(MyIP,getMyIP());
+ strcpy(MyMac,getMyMac());
+ strcpy(GateIP,getGatewayIP());
+
+ printf("%s\n",MyIP);
+ printf("%s\n",GateIP);
+ printf("%s\n",MyMac);
  strcpy(victmIP,argv[1]);
  printf("%s\n",victmIP);
  tok=strtok(getMyMac(),":");
@@ -92,6 +101,6 @@ int main(int argc, char* argv[])
  while(tok = strtok(NULL,":")){
 	printf("%s\n",tok);
 }
- printf("%s",set_packetToGetMac(getMyIP(),victmIP,getMyMac()));
+ set_packet(MyIP,victmIP,MyMac);
  return 0;
 }
